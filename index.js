@@ -8,6 +8,7 @@ const RetryStream = require('retry-stream-proxy')
 const through = require('through2')
 const Throttled = require('throttled-transform-stream').default
 const bole = require('bole')
+const mime = require('mime-types')
 
 const log = {
   azure: bole('azure'),
@@ -57,12 +58,17 @@ function copy (options) {
           return callback(null)
         }
       }
-
+      log.s3.debug(file.name)
       const stream = new RetryStream(createBlobStream.bind(null, file.name), {
         delay: 1000
       })
 
-      s3.upload({ Key: file.name, Body: stream }, callback)
+      var params = { Key: file.name, Body: stream, CacheControl: 'max-age=315360000', ContentType: 'application/octet-stream'}
+      var contentType = mime.lookup(file.name)
+      if (contentType) {
+        params['ContentType'] = contentType;
+      }
+      s3.upload(params, callback)
     })
   }
 
